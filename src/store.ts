@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Expediente, Audiencia, User, AppSettings, ExpedienteStatus } from './types';
 import { saveExpedienteToSheet, updateExpedienteInSheet, fetchExpedientesFromSheet, fetchUsersFromSheet, updateAudienciaDateInSheet } from './services/googleSheets';
 
@@ -39,11 +39,16 @@ export function useStore() {
       ]);
 
       // Si llegamos aquí, la conexión fue exitosa.
-      // El Excel es la fuente de verdad.
-      const normalizedSheets = (sheetExpedientes || []).map(exp => ({
-        ...exp,
-        timeline: Array.isArray(exp.timeline) ? exp.timeline : []
-      }));
+      // El Excel es la fuente de verdad, pero intentamos preservar IDs locales si faltan en el Excel
+      const normalizedSheets = (sheetExpedientes || []).map(exp => {
+        // Si el Excel no tiene ID, intentamos buscarlo en el estado local por número de expediente
+        const existing = expedientes.find(e => e.numero === exp.numero);
+        return {
+          ...exp,
+          id: exp.id || (existing ? existing.id : crypto.randomUUID()),
+          timeline: Array.isArray(exp.timeline) ? exp.timeline : []
+        };
+      });
       
       setExpedientes(normalizedSheets);
 
@@ -150,28 +155,47 @@ export function useStore() {
     return newExpediente;
   };
 
-  const updateExpedienteStatus = (id: string, newStatus: ExpedienteStatus, notes?: string) => {
+  // Heal expedientes missing IDs
+  React.useEffect(() => {
+    const missingIds = expedientes.some(e => !e.id);
+    if (missingIds) {
+      setExpedientes(prev => prev.map(e => ({
+        ...e,
+        id: e.id || crypto.randomUUID()
+      })));
+    }
+  }, [expedientes]);
+
+  const updateExpedienteStatus = async (id: string, newStatus: ExpedienteStatus, notes?: string) => {
+    if (!id) {
+      console.error("No se puede actualizar un expediente sin ID");
+      return;
+    }
     const now = new Date().toISOString();
-    setExpedientes(prev => prev.map(exp => {
-      if (exp.id === id) {
-        const updated = {
-          ...exp,
-          estado: newStatus,
-          fechaModificacion: now,
-          timeline: [
-            ...(Array.isArray(exp.timeline) ? exp.timeline : []),
-            { id: crypto.randomUUID(), status: newStatus, date: now, notes }
-          ]
-        };
-        // Sincronizar actualización
-        updateExpedienteInSheet(updated);
-        return updated;
-      }
-      return exp;
-    }));
+    const expToUpdate = expedientes.find(e => e.id === id);
+    if (!expToUpdate) return;
+
+    const updated = {
+      ...expToUpdate,
+      estado: newStatus,
+      fechaModificacion: now,
+      timeline: [
+        ...(Array.isArray(expToUpdate.timeline) ? expToUpdate.timeline : []),
+        { id: crypto.randomUUID(), status: newStatus, date: now, notes }
+      ]
+    };
+
+    setExpedientes(prev => prev.map(e => e.id === id ? updated : e));
+    
+    // Sincronizar actualización
+    await updateExpedienteInSheet(updated);
   };
 
   const addAudiencia = (data: Omit<Audiencia, 'id'>) => {
+    if (!data.expedienteId) {
+      console.error("No se puede agregar una audiencia sin ID de expediente");
+      return;
+    }
     const dateOnly = data.fecha.split('T')[0];
     const newAudiencia: Audiencia = {
       ...data,
