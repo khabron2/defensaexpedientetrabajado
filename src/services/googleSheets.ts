@@ -1,7 +1,7 @@
 /// <reference types="vite/client" />
 import { Expediente } from '../types';
 
-const SCRIPT_URL = import.meta.env.VITE_GOOGLE_SCRIPT_URL || 'https://script.google.com/macros/s/AKfycbxuN32pBslB9nfJpdCpHbC3gTCzQKK_1N9KUt4xlWqtaCmB3q8ZiTf4Jk8vRhSrwOXq/exec';
+const SCRIPT_URL = import.meta.env.VITE_GOOGLE_SCRIPT_URL || 'https://script.google.com/macros/s/AKfycbyvpxjzaAE0mnfOBonDLkLz7UkUbgkRP-NiM6BtdUpT0P-9w26UFF1MLF6pTjI9ApDU/exec';
 
 export async function fetchExpedientesFromSheet(): Promise<Expediente[]> {
   if (!SCRIPT_URL) {
@@ -166,27 +166,35 @@ export async function updateAudienciaDateInSheet(expedienteId: string, fechaAudi
  *   if (params.action === 'updateExpediente') {
  *     var exp = params.data;
  *     var data = sheet.getDataRange().getValues();
+ *     var found = false;
  *     for (var i = 1; i < data.length; i++) {
- *       if (data[i][19] === exp.id) { // ID en Columna 1 (índice 19)
- *         sheet.getRange(i + 1, 23).setValue(exp.estado); // Estado en Columna 4 (Col 23)
- *         sheet.getRange(i + 1, 22).setValue(exp.fechaModificacion || new Date()); // Fecha Mod en Columna 3 (Col 22)
- *         sheet.getRange(i + 1, 24).setValue(JSON.stringify(exp.timeline || [])); // Timeline en Columna 5 (Col 24)
+ *       // Intentar coincidir por ID (Columna 20) o por Número de Expediente (Columna 1)
+ *       if ((exp.id && data[i][19] === exp.id) || (data[i][0] === exp.numero)) {
+ *         sheet.getRange(i + 1, 23).setValue(exp.estado); // Estado en Columna 23
+ *         sheet.getRange(i + 1, 22).setValue(exp.fechaModificacion || new Date()); // Fecha Mod en Columna 22
+ *         sheet.getRange(i + 1, 24).setValue(JSON.stringify(exp.timeline || [])); // Timeline en Columna 24
+ *         if (!data[i][19] && exp.id) {
+ *           sheet.getRange(i + 1, 20).setValue(exp.id); // Guardar ID si no existía
+ *         }
+ *         found = true;
  *         break;
  *       }
  *     }
- *     return ContentService.createTextOutput("Success").setMimeType(ContentService.MimeType.TEXT);
+ *     return ContentService.createTextOutput(found ? "Success" : "Not Found").setMimeType(ContentService.MimeType.TEXT);
  *   }
  *
  *   if (params.action === 'updateAudienciaDate') {
  *     var info = params.data;
  *     var data = sheet.getDataRange().getValues();
+ *     var found = false;
  *     for (var i = 1; i < data.length; i++) {
- *       if (data[i][19] === info.expedienteId) { // ID en Columna 1 (índice 19)
+ *       if (data[i][19] === info.expedienteId) { // ID en Columna 20
  *         sheet.getRange(i + 1, 19).setValue(info.fechaAudiencia); // Fecha de Audiencia en Col 19
+ *         found = true;
  *         break;
  *       }
  *     }
- *     return ContentService.createTextOutput("Success").setMimeType(ContentService.MimeType.TEXT);
+ *     return ContentService.createTextOutput(found ? "Success" : "Not Found").setMimeType(ContentService.MimeType.TEXT);
  *   }
  * }
 

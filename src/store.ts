@@ -54,12 +54,26 @@ export function useStore() {
 
       // Si llegamos aquí, la conexión fue exitosa.
       setExpedientes(currentExpedientes => {
+        console.log('📦 Datos recibidos del Sheet:', sheetExpedientes?.length, 'filas');
         const normalizedSheets = (sheetExpedientes || []).map(exp => {
           // Si el Excel no tiene ID, intentamos buscarlo en el estado local por número de expediente
           const existing = currentExpedientes.find(e => e.numero === exp.numero);
+          
+          // Si tenemos una versión local más reciente, la preservamos
+          if (existing && existing.fechaModificacion) {
+            const localDate = new Date(existing.fechaModificacion).getTime();
+            const sheetDate = exp.fechaModificacion ? new Date(exp.fechaModificacion).getTime() : 0;
+            
+            if (!isNaN(localDate) && (isNaN(sheetDate) || localDate > sheetDate)) {
+              console.log(`⏳ Preservando versión local más reciente para ${exp.numero} (Local: ${existing.fechaModificacion}, Sheet: ${exp.fechaModificacion || 'N/A'})`);
+              return existing;
+            }
+          }
+
           return {
             ...exp,
             id: exp.id || (existing ? existing.id : generateId()),
+            estado: exp.estado || (existing ? existing.estado : 'expediente no armado, esperando documental'),
             timeline: Array.isArray(exp.timeline) ? exp.timeline : []
           };
         });

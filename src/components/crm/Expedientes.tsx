@@ -14,7 +14,8 @@ import {
   User as UserIcon,
   X,
   Upload,
-  Printer
+  Printer,
+  RefreshCw
 } from 'lucide-react';
 import { es } from 'date-fns/locale';
 import { cn, safeFormat } from '../../lib/utils';
@@ -32,6 +33,7 @@ export default function Expedientes({ store }: ExpedientesProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedExpediente, setSelectedExpediente] = useState<Expediente | null>(null);
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
+  const [isSavingStatus, setIsSavingStatus] = useState(false);
   const [newStatus, setNewStatus] = useState<ExpedienteStatus | ''>('');
   const [statusNotes, setStatusNotes] = useState('');
 
@@ -51,9 +53,11 @@ export default function Expedientes({ store }: ExpedientesProps) {
     exp.empresas.some(e => String(e.nombre || '').toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
-  const handleUpdateStatus = () => {
+  const handleUpdateStatus = async () => {
     if (selectedExpediente && newStatus) {
-      updateExpedienteStatus(selectedExpediente.id, newStatus, statusNotes);
+      setIsSavingStatus(true);
+      await updateExpedienteStatus(selectedExpediente.id, newStatus, statusNotes);
+      setIsSavingStatus(false);
       setIsUpdatingStatus(false);
       setNewStatus('');
       setStatusNotes('');
@@ -509,10 +513,11 @@ export default function Expedientes({ store }: ExpedientesProps) {
                   </button>
                   <button 
                     onClick={handleUpdateStatus}
-                    disabled={!newStatus}
-                    className="flex-1 py-3 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 transition-all disabled:opacity-50"
+                    disabled={!newStatus || isSavingStatus}
+                    className="flex-1 py-3 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
                   >
-                    Guardar Cambio
+                    {isSavingStatus && <RefreshCw className="w-4 h-4 animate-spin" />}
+                    {isSavingStatus ? 'Guardando...' : 'Guardar Cambio'}
                   </button>
                 </div>
               </div>
