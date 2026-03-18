@@ -10,6 +10,14 @@ const STORAGE_KEYS = {
   CURRENT_USER: 'defensa_consumidor_current_user',
 };
 
+const generateId = () => {
+  try {
+    return crypto.randomUUID();
+  } catch (e) {
+    return Math.random().toString(36).substring(2) + Date.now().toString(36);
+  }
+};
+
 export function useStore() {
   const [expedientes, setExpedientes] = useState<Expediente[]>(() => {
     const saved = localStorage.getItem(STORAGE_KEYS.EXPEDIENTES);
@@ -30,46 +38,67 @@ export function useStore() {
     return saved ? JSON.parse(saved) : null;
   });
 
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [lastSync, setLastSync] = useState<Date | null>(null);
+
   // Sincronización con Google Sheets
   const syncWithSheets = async () => {
+    if (isSyncing) return;
+    setIsSyncing(true);
     try {
+      console.log('🔄 Iniciando sincronización con Google Sheets...');
       const [sheetExpedientes, sheetUsers] = await Promise.all([
         fetchExpedientesFromSheet(),
         fetchUsersFromSheet()
       ]);
 
       // Si llegamos aquí, la conexión fue exitosa.
-      // El Excel es la fuente de verdad, pero intentamos preservar IDs locales si faltan en el Excel
-      const normalizedSheets = (sheetExpedientes || []).map(exp => {
-        // Si el Excel no tiene ID, intentamos buscarlo en el estado local por número de expediente
-        const existing = expedientes.find(e => e.numero === exp.numero);
-        return {
-          ...exp,
-          id: exp.id || (existing ? existing.id : crypto.randomUUID()),
-          timeline: Array.isArray(exp.timeline) ? exp.timeline : []
-        };
+      setExpedientes(currentExpedientes => {
+        const normalizedSheets = (sheetExpedientes || []).map(exp => {
+          // Si el Excel no tiene ID, intentamos buscarlo en el estado local por número de expediente
+          const existing = currentExpedientes.find(e => e.numero === exp.numero);
+          return {
+            ...exp,
+            id: exp.id || (existing ? existing.id : generateId()),
+            timeline: Array.isArray(exp.timeline) ? exp.timeline : []
+          };
+        });
+
+        // Evitar duplicados por número de expediente
+        const uniqueExpedientes: Expediente[] = [];
+        const seenNumbers = new Set();
+        
+        normalizedSheets.forEach(exp => {
+          if (!seenNumbers.has(exp.numero)) {
+            uniqueExpedientes.push(exp);
+            seenNumbers.add(exp.numero);
+          }
+        });
+
+        console.log(`✅ Sincronización completada. ${uniqueExpedientes.length} expedientes únicos.`);
+        return uniqueExpedientes;
       });
-      
-      setExpedientes(normalizedSheets);
 
-      // Limpiar audiencias cuyos expedientes ya no existen
-      setAudiencias(prev => prev.filter(aud => 
-        normalizedSheets.some(exp => exp.id === aud.expedienteId)
-      ));
-
+      setLastSync(new Date());
       if (sheetUsers && sheetUsers.length > 0) {
         setUsers(sheetUsers);
       }
     } catch (error) {
       console.error('⚠️ Error de conexión con Google Sheets. Manteniendo datos locales.', error);
+    } finally {
+      setIsSyncing(false);
     }
   };
 
+  // Ref para evitar problemas de clausura en el intervalo
+  const syncRef = React.useRef(syncWithSheets);
+  syncRef.current = syncWithSheets;
+
   useEffect(() => {
-    syncWithSheets();
+    syncRef.current();
     
     // Sincronización automática cada 2 minutos
-    const interval = setInterval(syncWithSheets, 120000);
+    const interval = setInterval(() => syncRef.current(), 120000);
     return () => clearInterval(interval);
   }, []);
 
@@ -133,13 +162,13 @@ export function useStore() {
     const now = new Date().toISOString();
     const newExpediente: Expediente = {
       ...data,
-      id: crypto.randomUUID(),
+      id: generateId(),
       numero,
       fechaCreacion: now,
       fechaModificacion: now,
       estado: 'expediente no armado, esperando documental',
       timeline: [{
-        id: crypto.randomUUID(),
+        id: generateId(),
         status: 'expediente no armado, esperando documental',
         date: now,
         notes: 'Reclamo ingresado por Ventanilla Única'
@@ -161,7 +190,7 @@ export function useStore() {
     if (missingIds) {
       setExpedientes(prev => prev.map(e => ({
         ...e,
-        id: e.id || crypto.randomUUID()
+        id: e.id || generateId()
       })));
     }
   }, [expedientes]);
@@ -181,14 +210,21 @@ export function useStore() {
       fechaModificacion: now,
       timeline: [
         ...(Array.isArray(expToUpdate.timeline) ? expToUpdate.timeline : []),
-        { id: crypto.randomUUID(), status: newStatus, date: now, notes }
+        { id: generateId(), status: newStatus, date: now, notes }
       ]
     };
 
-    setExpedientes(prev => prev.map(e => e.id === id ? updated : e));
+    setExpedientes(prev => {
+      const exists = prev.find(e => e.id === id);
+      if (!exists) return prev;
+      return prev.map(e => e.id === id ? updated : e);
+    });
     
     // Sincronizar actualización
-    await updateExpedienteInSheet(updated);
+    const success = await updateExpedienteInSheet(updated);
+    if (!success) {
+      console.warn("⚠️ No se pudo guardar el estado en Google Sheets. Se reintentará en la próxima sincronización.");
+    }
   };
 
   const addAudiencia = (data: Omit<Audiencia, 'id'>) => {
@@ -200,7 +236,7 @@ export function useStore() {
     const newAudiencia: Audiencia = {
       ...data,
       fecha: dateOnly,
-      id: crypto.randomUUID(),
+      id: generateId(),
     };
     setAudiencias(prev => [...prev, newAudiencia]);
     
@@ -218,7 +254,7 @@ export function useStore() {
 
   const addUser = (username: string, role: 'admin' | 'staff') => {
     const newUser: User = {
-      id: crypto.randomUUID(),
+      id: generateId(),
       username,
       role,
     };
@@ -244,5 +280,7 @@ export function useStore() {
     deleteUser,
     setSettings,
     refreshData: syncWithSheets,
+    isSyncing,
+    lastSync,
   };
 }

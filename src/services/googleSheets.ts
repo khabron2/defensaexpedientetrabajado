@@ -10,11 +10,11 @@ export async function fetchExpedientesFromSheet(): Promise<Expediente[]> {
   }
   
   try {
-    console.log('📡 Intentando conectar con Google Sheets...');
+    console.log('📡 Fetching expedientes from Sheets...');
     const response = await fetch(`${SCRIPT_URL}?action=getExpedientes`);
     if (!response.ok) throw new Error(`Error HTTP: ${response.status}`);
     const data = await response.json();
-    console.log('✅ Datos recibidos de Sheets:', data.length, 'expedientes');
+    console.log('✅ Fetched', data.length, 'expedientes from Sheets.');
     return data;
   } catch (error) {
     console.error('❌ Error al obtener datos de Sheets:', error);
@@ -26,9 +26,11 @@ export async function fetchUsersFromSheet(): Promise<any[]> {
   if (!SCRIPT_URL) return [];
   
   try {
+    console.log('📡 Fetching users from Sheets...');
     const response = await fetch(`${SCRIPT_URL}?action=getUsers`);
     if (!response.ok) throw new Error(`Error HTTP: ${response.status}`);
     const data = await response.json();
+    console.log('✅ Fetched', data.length, 'users from Sheets.');
     return data;
   } catch (error) {
     console.error('❌ Error al obtener usuarios de Sheets:', error);
@@ -40,7 +42,7 @@ export async function saveExpedienteToSheet(expediente: Expediente): Promise<boo
   if (!SCRIPT_URL) return false;
 
   try {
-    console.log('📤 Enviando nuevo expediente a Sheets...', expediente.numero);
+    console.log('📤 Enviando nuevo expediente a Sheets...', expediente.numero, 'ID:', expediente.id);
     
     // Enviamos como text/plain para evitar el preflight de CORS (OPTIONS)
     // que Google Apps Script no maneja bien.
@@ -56,7 +58,7 @@ export async function saveExpedienteToSheet(expediente: Expediente): Promise<boo
       }),
     });
     
-    console.log('🚀 Petición enviada. Revisa tu hoja de cálculo.');
+    console.log('✅ Petición de guardado enviada a Sheets.');
     return true;
   } catch (error) {
     console.error('❌ Error al guardar en Sheets:', error);
@@ -68,7 +70,8 @@ export async function updateExpedienteInSheet(expediente: Expediente): Promise<b
   if (!SCRIPT_URL) return false;
 
   try {
-    await fetch(SCRIPT_URL, {
+    console.log('📝 Actualizando expediente en Sheets...', expediente.numero, 'ID:', expediente.id);
+    const response = await fetch(SCRIPT_URL, {
       method: 'POST',
       mode: 'no-cors',
       headers: {
@@ -79,9 +82,10 @@ export async function updateExpedienteInSheet(expediente: Expediente): Promise<b
         data: expediente
       }),
     });
+    console.log('✅ Petición de actualización enviada a Sheets.');
     return true;
   } catch (error) {
-    console.error('Error updating in Sheets:', error);
+    console.error('❌ Error al actualizar en Sheets:', error);
     return false;
   }
 }
@@ -90,6 +94,7 @@ export async function updateAudienciaDateInSheet(expedienteId: string, fechaAudi
   if (!SCRIPT_URL) return false;
 
   try {
+    console.log('📅 Actualizando fecha de audiencia en Sheets...', expedienteId);
     await fetch(SCRIPT_URL, {
       method: 'POST',
       mode: 'no-cors',
@@ -101,9 +106,10 @@ export async function updateAudienciaDateInSheet(expedienteId: string, fechaAudi
         data: { expedienteId, fechaAudiencia }
       }),
     });
+    console.log('✅ Petición de fecha de audiencia enviada a Sheets.');
     return true;
   } catch (error) {
-    console.error('Error updating audiencia date in Sheets:', error);
+    console.error('❌ Error al actualizar fecha de audiencia en Sheets:', error);
     return false;
   }
 }

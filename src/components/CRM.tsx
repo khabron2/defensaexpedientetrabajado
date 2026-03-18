@@ -29,15 +29,10 @@ type Section = 'dashboard' | 'expedientes' | 'audiencias' | 'reportes' | 'config
 
 export default function CRM({ onBackToPublic, store }: CRMProps) {
   const [activeSection, setActiveSection] = useState<Section>('dashboard');
-
-  const [isRefreshing, setIsRefreshing] = useState(false);
-  const [lastSync, setLastSync] = useState<Date | null>(new Date());
+  const { isSyncing, lastSync, refreshData } = store;
 
   const handleRefresh = async () => {
-    setIsRefreshing(true);
-    await store.refreshData();
-    setLastSync(new Date());
-    setTimeout(() => setIsRefreshing(false), 1000);
+    await refreshData();
   };
 
   const menuItems = [
@@ -132,10 +127,10 @@ export default function CRM({ onBackToPublic, store }: CRMProps) {
 
             <button 
               onClick={handleRefresh}
-              disabled={isRefreshing}
+              disabled={isSyncing}
               className={cn(
                 "p-2 text-slate-400 hover:text-indigo-600 hover:bg-slate-100 rounded-lg transition-all",
-                isRefreshing && "animate-spin text-indigo-600"
+                isSyncing && "animate-spin text-indigo-600"
               )}
               title="Sincronizar con Google Sheets"
             >
