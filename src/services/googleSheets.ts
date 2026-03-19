@@ -1,7 +1,7 @@
 /// <reference types="vite/client" />
 import { Expediente } from '../types';
 
-const SCRIPT_URL = import.meta.env.VITE_GOOGLE_SCRIPT_URL || 'https://script.google.com/macros/s/AKfycbyvpxjzaAE0mnfOBonDLkLz7UkUbgkRP-NiM6BtdUpT0P-9w26UFF1MLF6pTjI9ApDU/exec';
+const SCRIPT_URL = import.meta.env.VITE_GOOGLE_SCRIPT_URL || 'https://script.google.com/macros/s/AKfycbykbBn_VOaZtlgKN30fnlKinGyemx9mw5FKq3o9R0Gm5NB-vFICh_y1wsU43p_rUVjS/exec';
 
 export async function fetchExpedientesFromSheet(): Promise<Expediente[]> {
   if (!SCRIPT_URL) {

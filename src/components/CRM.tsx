@@ -11,7 +11,8 @@ import {
   RefreshCw,
   User as UserIcon,
   ChevronRight,
-  ExternalLink
+  ExternalLink,
+  Database
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 import Dashboard from './crm/Dashboard';
@@ -88,6 +89,16 @@ export default function CRM({ onBackToPublic, store }: CRMProps) {
         </nav>
 
         <div className="p-6 border-t border-slate-800/50 space-y-3">
+          <a
+            href={`https://docs.google.com/spreadsheets/d/${import.meta.env.VITE_GOOGLE_SHEET_ID || '14ocpgew1-H38gckeiFP_KHbuJgOYv-fDuqvRH3yitwE'}/edit`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="w-full flex items-center gap-4 px-5 py-4 rounded-2xl text-slate-500 hover:bg-emerald-500/10 hover:text-emerald-400 transition-all duration-300 group"
+          >
+            <Database className="w-5 h-5 group-hover:scale-110 transition-transform" />
+            <span className="font-bold text-sm">Abrir Google Sheet</span>
+          </a>
+
           <button
             onClick={onBackToPublic}
             className="w-full flex items-center gap-4 px-5 py-4 rounded-2xl text-slate-500 hover:bg-indigo-500/10 hover:text-indigo-400 transition-all duration-300 group"
