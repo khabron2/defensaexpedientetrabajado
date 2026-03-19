@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Expediente, Audiencia, User, AppSettings, ExpedienteStatus } from './types';
-import { saveExpedienteToSheet, updateExpedienteInSheet, fetchExpedientesFromSheet, fetchUsersFromSheet, updateAudienciaDateInSheet } from './services/googleSheets';
+import { Expediente, Audiencia, User, AppSettings, ExpedienteStatus, Notificacion } from './types';
+import { saveExpedienteToSheet, updateExpedienteInSheet, fetchExpedientesFromSheet, fetchUsersFromSheet, updateAudienciaDateInSheet, fetchNotificacionesFromSheet } from './services/googleSheets';
 
 const STORAGE_KEYS = {
   EXPEDIENTES: 'defensa_consumidor_expedientes',
@@ -8,6 +8,7 @@ const STORAGE_KEYS = {
   USERS: 'defensa_consumidor_users',
   SETTINGS: 'defensa_consumidor_settings',
   CURRENT_USER: 'defensa_consumidor_current_user',
+  NOTIFICACIONES: 'defensa_consumidor_notificaciones',
 };
 
 const generateId = () => {
@@ -39,20 +40,24 @@ export function useStore() {
   });
 
   const [isSyncing, setIsSyncing] = useState(false);
+  const [syncError, setSyncError] = useState<string | null>(null);
   const [lastSync, setLastSync] = useState<Date | null>(null);
 
   // Sincronización con Google Sheets
   const syncWithSheets = async () => {
     if (isSyncing) return;
     setIsSyncing(true);
+    setSyncError(null);
     try {
       console.log('🔄 Iniciando sincronización con Google Sheets...');
-      const [sheetExpedientes, sheetUsers] = await Promise.all([
-        fetchExpedientesFromSheet(),
-        fetchUsersFromSheet()
-      ]);
+      
+      // Ejecutar secuencialmente para no saturar el script de Google
+      const sheetExpedientes = await fetchExpedientesFromSheet();
+      const sheetUsers = await fetchUsersFromSheet();
+      const sheetNotificaciones = await fetchNotificacionesFromSheet();
 
       // Si llegamos aquí, la conexión fue exitosa.
+      setSyncError(null);
       setExpedientes(currentExpedientes => {
         console.log('📦 Datos recibidos del Sheet:', sheetExpedientes?.length, 'filas');
         const normalizedSheets = (sheetExpedientes || []).map(exp => {
@@ -97,8 +102,12 @@ export function useStore() {
       if (sheetUsers && sheetUsers.length > 0) {
         setUsers(sheetUsers);
       }
-    } catch (error) {
+      if (sheetNotificaciones && sheetNotificaciones.length > 0) {
+        setNotificaciones(sheetNotificaciones);
+      }
+    } catch (error: any) {
       console.error('⚠️ Error de conexión con Google Sheets. Manteniendo datos locales.', error);
+      setSyncError(error.message || 'Error de conexión');
     } finally {
       setIsSyncing(false);
     }
@@ -128,6 +137,11 @@ export function useStore() {
     ];
   });
 
+  const [notificaciones, setNotificaciones] = useState<Notificacion[]>(() => {
+    const saved = localStorage.getItem(STORAGE_KEYS.NOTIFICACIONES);
+    return saved ? JSON.parse(saved) : [];
+  });
+
   const [settings, setSettings] = useState<AppSettings>(() => {
     const saved = localStorage.getItem(STORAGE_KEYS.SETTINGS);
     return saved ? JSON.parse(saved) : { proximoNumero: 1000 };
@@ -144,6 +158,10 @@ export function useStore() {
   useEffect(() => {
     localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(users));
   }, [users]);
+
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEYS.NOTIFICACIONES, JSON.stringify(notificaciones));
+  }, [notificaciones]);
 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(settings));
@@ -282,6 +300,7 @@ export function useStore() {
   return {
     expedientes,
     audiencias,
+    notificaciones,
     users,
     settings,
     currentUser,
@@ -295,6 +314,7 @@ export function useStore() {
     setSettings,
     refreshData: syncWithSheets,
     isSyncing,
+    syncError,
     lastSync,
   };
 }

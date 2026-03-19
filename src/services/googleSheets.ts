@@ -1,7 +1,53 @@
 /// <reference types="vite/client" />
-import { Expediente } from '../types';
+import { Expediente, Notificacion } from '../types';
 
 const SCRIPT_URL = import.meta.env.VITE_GOOGLE_SCRIPT_URL || 'https://script.google.com/macros/s/AKfycbykbBn_VOaZtlgKN30fnlKinGyemx9mw5FKq3o9R0Gm5NB-vFICh_y1wsU43p_rUVjS/exec';
+
+async function fetchWithTimeout(url: string, options: RequestInit = {}, timeout = 60000) {
+  const controller = new AbortController();
+  const id = setTimeout(() => controller.abort(), timeout);
+  
+  try {
+    const response = await fetch(url, {
+      ...options,
+      signal: controller.signal,
+    });
+    clearTimeout(id);
+    return response;
+  } catch (error: any) {
+    clearTimeout(id);
+    
+    // Verificar si es un error de aborto (timeout o manual)
+    const isAbort = 
+      error.name === 'AbortError' || 
+      error.name === 'TimeoutError' ||
+      (error.message && (
+        error.message.toLowerCase().includes('aborted') || 
+        error.message.toLowerCase().includes('timeout') ||
+        error.message.toLowerCase().includes('signal')
+      ));
+
+    if (isAbort) {
+      throw new Error(`Timeout de ${timeout}ms excedido. El servidor de Google Apps Script está tardando demasiado en responder o está inactivo.`);
+    }
+    throw error;
+  }
+}
+
+async function fetchWithRetry(url: string, options: RequestInit = {}, retries = 3, timeout = 60000): Promise<Response> {
+  try {
+    return await fetchWithTimeout(url, options, timeout);
+  } catch (error: any) {
+    if (retries > 0) {
+      console.log(`🔄 Reintentando petición (${retries} intentos restantes)...`);
+      // Esperar un poco antes de reintentar (backoff exponencial simple: 1s, 2s, 3s)
+      const waitTime = (4 - retries) * 1000;
+      await new Promise(resolve => setTimeout(resolve, waitTime));
+      return fetchWithRetry(url, options, retries - 1, timeout);
+    }
+    throw error;
+  }
+}
 
 export async function fetchExpedientesFromSheet(): Promise<Expediente[]> {
   if (!SCRIPT_URL) {
@@ -10,14 +56,25 @@ export async function fetchExpedientesFromSheet(): Promise<Expediente[]> {
   }
   
   try {
-    console.log('📡 Fetching expedientes from Sheets...');
-    const response = await fetch(`${SCRIPT_URL}?action=getExpedientes`);
+    console.log('📡 Fetching expedientes from Sheets (Timeout: 60s)...');
+    const response = await fetchWithRetry(`${SCRIPT_URL}?action=getExpedientes`, {
+      method: 'GET',
+      mode: 'cors',
+      cache: 'no-cache'
+    });
+    
     if (!response.ok) throw new Error(`Error HTTP: ${response.status}`);
     const data = await response.json();
     console.log('✅ Fetched', data.length, 'expedientes from Sheets.');
     return data;
-  } catch (error) {
-    console.error('❌ Error al obtener datos de Sheets:', error);
+  } catch (error: any) {
+    console.error('❌ Error al obtener datos de Sheets:', error.message || error);
+    
+    if (error.message?.includes('Timeout')) {
+      console.error('⏱️ La solicitud a Google Sheets excedió el tiempo de espera (60s). Esto suele ocurrir cuando el script de Google está en "frío" o hay demasiados datos.');
+    } else if (error.message === 'Failed to fetch' || error.name === 'TypeError') {
+      console.error('🌐 Error de red o CORS. Verifique que el script de Google esté publicado como "Cualquiera" (Anyone) y que tenga acceso a internet.');
+    }
     throw error;
   }
 }
@@ -26,14 +83,46 @@ export async function fetchUsersFromSheet(): Promise<any[]> {
   if (!SCRIPT_URL) return [];
   
   try {
-    console.log('📡 Fetching users from Sheets...');
-    const response = await fetch(`${SCRIPT_URL}?action=getUsers`);
+    console.log('📡 Fetching users from Sheets (Timeout: 60s)...');
+    const response = await fetchWithRetry(`${SCRIPT_URL}?action=getUsers`, {
+      method: 'GET',
+      mode: 'cors',
+      cache: 'no-cache'
+    });
+    
     if (!response.ok) throw new Error(`Error HTTP: ${response.status}`);
     const data = await response.json();
     console.log('✅ Fetched', data.length, 'users from Sheets.');
     return data;
-  } catch (error) {
-    console.error('❌ Error al obtener usuarios de Sheets:', error);
+  } catch (error: any) {
+    console.error('❌ Error al obtener usuarios de Sheets:', error.message || error);
+    if (error.message?.includes('Timeout')) {
+      console.error('⏱️ La solicitud a Google Sheets excedió el tiempo de espera (60s).');
+    }
+    throw error;
+  }
+}
+
+export async function fetchNotificacionesFromSheet(): Promise<Notificacion[]> {
+  if (!SCRIPT_URL) return [];
+  
+  try {
+    console.log('📡 Fetching notificaciones from Sheets (Timeout: 60s)...');
+    const response = await fetchWithRetry(`${SCRIPT_URL}?action=getNotificaciones`, {
+      method: 'GET',
+      mode: 'cors',
+      cache: 'no-cache'
+    });
+    
+    if (!response.ok) throw new Error(`Error HTTP: ${response.status}`);
+    const data = await response.json();
+    console.log('✅ Fetched', data.length, 'notificaciones from Sheets.');
+    return data;
+  } catch (error: any) {
+    console.error('❌ Error al obtener notificaciones de Sheets:', error.message || error);
+    if (error.message?.includes('Timeout')) {
+      console.error('⏱️ La solicitud a Google Sheets excedió el tiempo de espera (60s).');
+    }
     throw error;
   }
 }

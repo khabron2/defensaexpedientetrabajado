@@ -114,27 +114,35 @@ export default function Reportes({ store }: ReportesProps) {
 
       {/* Detailed Stats Table */}
       <div className="bg-white p-8 rounded-3xl shadow-sm border border-slate-200">
-        <h3 className="text-lg font-bold text-slate-800 mb-6">Resumen Estadístico</h3>
+        <h3 className="text-lg font-bold text-slate-800 mb-6">Resumen Estadístico (Notificaciones)</h3>
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
           <div className="p-6 bg-slate-50 rounded-2xl border border-slate-100">
-            <p className="text-xs font-bold text-slate-400 uppercase mb-1">Audiencias</p>
-            <p className="text-2xl font-black text-slate-900">{store.audiencias.length}</p>
-            <p className="text-[10px] text-emerald-600 font-bold mt-2">+5% vs mes pasado</p>
+            <p className="text-xs font-bold text-slate-400 uppercase mb-1">Audiencia</p>
+            <p className="text-2xl font-black text-slate-900">
+              {store.notificaciones.filter((n: any) => n.tipo?.toLowerCase().includes('audiencia')).length}
+            </p>
+            <p className="text-[10px] text-emerald-600 font-bold mt-2">Cédulas enviadas</p>
           </div>
           <div className="p-6 bg-slate-50 rounded-2xl border border-slate-100">
-            <p className="text-xs font-bold text-slate-400 uppercase mb-1">Notificaciones</p>
-            <p className="text-2xl font-black text-slate-900">124</p>
-            <p className="text-[10px] text-slate-400 font-bold mt-2">En proceso</p>
+            <p className="text-xs font-bold text-slate-400 uppercase mb-1">Notificación</p>
+            <p className="text-2xl font-black text-slate-900">
+              {store.notificaciones.filter((n: any) => n.tipo?.toLowerCase().includes('notificaci')).length}
+            </p>
+            <p className="text-[10px] text-slate-400 font-bold mt-2">Total registradas</p>
           </div>
           <div className="p-6 bg-slate-50 rounded-2xl border border-slate-100">
-            <p className="text-xs font-bold text-slate-400 uppercase mb-1">Auto Imputaciones</p>
-            <p className="text-2xl font-black text-slate-900">18</p>
+            <p className="text-xs font-bold text-slate-400 uppercase mb-1">Auto de Imputación</p>
+            <p className="text-2xl font-black text-slate-900">
+              {store.notificaciones.filter((n: any) => n.tipo?.toLowerCase().includes('auto de imputación')).length}
+            </p>
             <p className="text-[10px] text-rose-600 font-bold mt-2">Requiere atención</p>
           </div>
           <div className="p-6 bg-slate-50 rounded-2xl border border-slate-100">
-            <p className="text-xs font-bold text-slate-400 uppercase mb-1">Traslados</p>
-            <p className="text-2xl font-black text-slate-900">42</p>
-            <p className="text-[10px] text-indigo-600 font-bold mt-2">Completados</p>
+            <p className="text-xs font-bold text-slate-400 uppercase mb-1">Actuación de Oficio</p>
+            <p className="text-2xl font-black text-slate-900">
+              {store.notificaciones.filter((n: any) => n.tipo?.toLowerCase().includes('actuación de oficio')).length}
+            </p>
+            <p className="text-[10px] text-indigo-600 font-bold mt-2">Iniciadas</p>
           </div>
         </div>
       </div>

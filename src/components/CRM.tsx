@@ -20,17 +20,18 @@ import Expedientes from './crm/Expedientes';
 import Audiencias from './crm/Audiencias';
 import Reportes from './crm/Reportes';
 import Configuracion from './crm/Configuracion';
+import Notificaciones from './crm/Notificaciones';
 
 interface CRMProps {
   onBackToPublic: () => void;
   store: any;
 }
 
-type Section = 'dashboard' | 'expedientes' | 'audiencias' | 'reportes' | 'configuracion';
+type Section = 'dashboard' | 'expedientes' | 'audiencias' | 'notificaciones' | 'reportes' | 'configuracion';
 
 export default function CRM({ onBackToPublic, store }: CRMProps) {
   const [activeSection, setActiveSection] = useState<Section>('dashboard');
-  const { isSyncing, lastSync, refreshData } = store;
+  const { isSyncing, lastSync, refreshData, syncError } = store;
 
   const handleRefresh = async () => {
     await refreshData();
@@ -40,6 +41,7 @@ export default function CRM({ onBackToPublic, store }: CRMProps) {
     { id: 'dashboard', label: 'Dashboard General', icon: LayoutDashboard },
     { id: 'expedientes', label: 'Expedientes', icon: Files },
     { id: 'audiencias', label: 'Agenda de Audiencias', icon: Calendar },
+    { id: 'notificaciones', label: 'Notificaciones', icon: Bell },
     { id: 'reportes', label: 'Reportes e Informes', icon: BarChart3 },
     { id: 'configuracion', label: 'Configuración', icon: Settings },
   ];
@@ -49,6 +51,7 @@ export default function CRM({ onBackToPublic, store }: CRMProps) {
       case 'dashboard': return <Dashboard store={store} />;
       case 'expedientes': return <Expedientes store={store} />;
       case 'audiencias': return <Audiencias store={store} />;
+      case 'notificaciones': return <Notificaciones store={store} />;
       case 'reportes': return <Reportes store={store} />;
       case 'configuracion': return <Configuracion store={store} />;
       default: return <Dashboard store={store} />;
@@ -89,6 +92,13 @@ export default function CRM({ onBackToPublic, store }: CRMProps) {
         </nav>
 
         <div className="p-6 border-t border-slate-800/50 space-y-3">
+          {isSyncing && (
+            <div className="flex items-center gap-3 px-5 py-2 text-indigo-400 animate-pulse">
+              <RefreshCw className="w-4 h-4 animate-spin" />
+              <span className="text-[10px] font-bold uppercase tracking-widest">Sincronizando...</span>
+            </div>
+          )}
+
           <a
             href={`https://docs.google.com/spreadsheets/d/${import.meta.env.VITE_GOOGLE_SHEET_ID || '14ocpgew1-H38gckeiFP_KHbuJgOYv-fDuqvRH3yitwE'}/edit`}
             target="_blank"
@@ -131,6 +141,20 @@ export default function CRM({ onBackToPublic, store }: CRMProps) {
           </div>
 
           <div className="flex items-center gap-6">
+            {syncError && (
+              <div className="flex items-center gap-2 px-3 py-1.5 bg-rose-50 text-rose-600 border border-rose-100 rounded-lg animate-in fade-in slide-in-from-top-2 duration-300">
+                <Bell className="w-4 h-4" />
+                <span className="text-[10px] font-bold uppercase tracking-wider">Error de Sincronización</span>
+                <button 
+                  onClick={handleRefresh}
+                  className="ml-2 p-1 hover:bg-rose-100 rounded transition-colors"
+                  title="Reintentar sincronización"
+                >
+                  <RefreshCw className="w-3 h-3" />
+                </button>
+              </div>
+            )}
+
             <div className="text-right hidden md:block">
               <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Última Sincronización</p>
               <p className="text-xs font-bold text-slate-600">{lastSync ? lastSync.toLocaleTimeString() : '---'}</p>

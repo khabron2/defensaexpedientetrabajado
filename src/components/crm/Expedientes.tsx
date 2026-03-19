@@ -36,6 +36,8 @@ export default function Expedientes({ store }: ExpedientesProps) {
   const [isSavingStatus, setIsSavingStatus] = useState(false);
   const [newStatus, setNewStatus] = useState<ExpedienteStatus | ''>('');
   const [statusNotes, setStatusNotes] = useState('');
+  const [isCustomStatus, setIsCustomStatus] = useState(false);
+  const [customStatusValue, setCustomStatusValue] = useState('');
 
   // Keep selected expediente in sync with store
   React.useEffect(() => {
@@ -54,13 +56,16 @@ export default function Expedientes({ store }: ExpedientesProps) {
   );
 
   const handleUpdateStatus = async () => {
-    if (selectedExpediente && newStatus) {
+    const statusToSave = isCustomStatus ? customStatusValue : newStatus;
+    if (selectedExpediente && statusToSave) {
       setIsSavingStatus(true);
-      await updateExpedienteStatus(selectedExpediente.id, newStatus, statusNotes);
+      await updateExpedienteStatus(selectedExpediente.id, statusToSave, statusNotes);
       setIsSavingStatus(false);
       setIsUpdatingStatus(false);
       setNewStatus('');
       setStatusNotes('');
+      setIsCustomStatus(false);
+      setCustomStatusValue('');
     }
   };
 
@@ -484,13 +489,37 @@ export default function Expedientes({ store }: ExpedientesProps) {
                     <label className="text-xs font-bold text-slate-500 uppercase">Nuevo Estado</label>
                     <select 
                       value={newStatus}
-                      onChange={(e) => setNewStatus(e.target.value as ExpedienteStatus)}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        if (val === 'CUSTOM') {
+                          setIsCustomStatus(true);
+                          setNewStatus('CUSTOM');
+                        } else {
+                          setIsCustomStatus(false);
+                          setNewStatus(val as ExpedienteStatus);
+                        }
+                      }}
                       className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 text-sm"
                     >
                       <option value="">Seleccione un estado...</option>
                       {ESTADOS.map(s => <option key={s} value={s}>{s.toUpperCase()}</option>)}
+                      <option value="CUSTOM">+ OTRO (INGRESAR MANUALMENTE)</option>
                     </select>
                   </div>
+
+                  {isCustomStatus && (
+                    <div className="space-y-2 animate-in fade-in slide-in-from-top-2 duration-200">
+                      <label className="text-xs font-bold text-indigo-500 uppercase">Especificar Estado</label>
+                      <input 
+                        type="text"
+                        value={customStatusValue}
+                        onChange={(e) => setCustomStatusValue(e.target.value)}
+                        placeholder="Escriba el nuevo estado aquí..."
+                        className="w-full px-4 py-3 bg-indigo-50 border border-indigo-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 text-sm font-bold text-indigo-900"
+                        autoFocus
+                      />
+                    </div>
+                  )}
 
                   <div className="space-y-2">
                     <label className="text-xs font-bold text-slate-500 uppercase">Notas (Opcional)</label>
@@ -513,7 +542,7 @@ export default function Expedientes({ store }: ExpedientesProps) {
                   </button>
                   <button 
                     onClick={handleUpdateStatus}
-                    disabled={!newStatus || isSavingStatus}
+                    disabled={(!isCustomStatus && !newStatus) || (isCustomStatus && !customStatusValue) || isSavingStatus}
                     className="flex-1 py-3 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
                   >
                     {isSavingStatus && <RefreshCw className="w-4 h-4 animate-spin" />}
