@@ -107,7 +107,11 @@ export function useStore() {
       }
     } catch (error: any) {
       console.error('⚠️ Error de conexión con Google Sheets. Manteniendo datos locales.', error);
-      setSyncError(error.message || 'Error de conexión');
+      setSyncError(
+        error.message?.includes('Failed to fetch') 
+          ? 'Error de red/CORS: Verifique que el script de Google esté publicado como "Cualquiera" (Anyone).' 
+          : (error.message || 'Error de conexión')
+      );
     } finally {
       setIsSyncing(false);
     }

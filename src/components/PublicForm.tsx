@@ -33,8 +33,6 @@ export default function PublicForm({ onOpenCRM, addExpediente, expedientes }: Pu
     empresas: [{ nombre: '' }],
     motivoReclamo: '',
     peticiones: '',
-    documento1: null as File | null,
-    documento2: null as File | null,
   });
 
   const handleInputChange = (section: string, field: string, value: any, index?: number) => {
@@ -82,8 +80,6 @@ export default function PublicForm({ onOpenCRM, addExpediente, expedientes }: Pu
       empresas: [{ nombre: '' }],
       motivoReclamo: '',
       peticiones: '',
-      documento1: null,
-      documento2: null,
     });
     setNumEmpresas(1);
     setSubmitted(false);
@@ -92,40 +88,9 @@ export default function PublicForm({ onOpenCRM, addExpediente, expedientes }: Pu
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    const docs: string[] = [];
-    
-    const fileToBase64 = (file: File): Promise<string> => {
-      return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.readAsDataURL(file);
-        reader.onload = () => resolve(reader.result as string);
-        reader.onerror = error => reject(error);
-      });
-    };
-
-    if (formData.documento1) {
-      try {
-        const b64 = await fileToBase64(formData.documento1);
-        docs.push(b64);
-      } catch (err) {
-        console.error("Error converting doc 1", err);
-      }
-    }
-
-    if (formData.documento2) {
-      try {
-        const b64 = await fileToBase64(formData.documento2);
-        docs.push(b64);
-      } catch (err) {
-        console.error("Error converting doc 2", err);
-      }
-    }
-
-    const { documento1, documento2, ...rest } = formData;
-
     addExpediente({
-      ...rest,
-      documentos: docs,
+      ...formData,
+      documentos: [],
     });
     setSubmitted(true);
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -160,10 +125,16 @@ export default function PublicForm({ onOpenCRM, addExpediente, expedientes }: Pu
             <ShieldCheck className="w-10 h-10" />
           </div>
           <h2 className="text-3xl font-bold text-slate-900 mb-4">¡Reclamo Cargado con Éxito!</h2>
-          <p className="text-slate-600 mb-8">
-            Su expediente ha sido generado y pronto será revisado por nuestro equipo legal.
-            Se le notificará por correo electrónico ante cualquier novedad.
-          </p>
+          <div className="space-y-4 mb-8">
+            <p className="text-slate-600">
+              Su expediente ha sido generado correctamente y pronto será revisado por nuestro equipo legal.
+            </p>
+            <div className="bg-amber-50 border border-amber-100 p-4 rounded-xl">
+              <p className="text-amber-800 font-medium">
+                Importante: Recuerde acercarse a nuestras oficinas con la documentación física de respaldo en los próximos 5 días hábiles para continuar con el trámite. De lo contrario, el reclamo quedará sin efecto.
+              </p>
+            </div>
+          </div>
           <button
             onClick={resetForm}
             className="px-8 py-3 bg-indigo-600 text-white rounded-xl font-semibold hover:bg-indigo-700 transition-colors"
@@ -353,53 +324,6 @@ export default function PublicForm({ onOpenCRM, addExpediente, expedientes }: Pu
               required
             />
           </div>
-        </section>
-
-        {/* Prueba Documental */}
-        <section className="bg-white p-8 rounded-3xl shadow-sm border border-slate-200">
-          <div className="flex items-center gap-3 mb-6">
-            <div className="p-2 bg-slate-50 text-slate-600 rounded-lg">
-              <Upload className="w-5 h-5" />
-            </div>
-            <h2 className="text-xl font-bold text-slate-800">Prueba Documental</h2>
-          </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="space-y-2">
-              <label className="text-xs font-bold text-slate-500 uppercase tracking-wider ml-1">Documento 1 (Factura, Contrato, etc.)</label>
-              <div className="relative group">
-                <input
-                  type="file"
-                  onChange={(e) => handleInputChange('root', 'documento1', e.target.files?.[0])}
-                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
-                />
-                <div className="px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl flex items-center gap-3 group-hover:border-indigo-300 transition-all">
-                  <Upload className="w-4 h-4 text-slate-400" />
-                  <span className="text-sm text-slate-500 truncate">
-                    {formData.documento1 ? formData.documento1.name : 'Seleccionar archivo...'}
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-xs font-bold text-slate-500 uppercase tracking-wider ml-1">Documento 2 (Captura, etc.)</label>
-              <div className="relative group">
-                <input
-                  type="file"
-                  onChange={(e) => handleInputChange('root', 'documento2', e.target.files?.[0])}
-                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
-                />
-                <div className="px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl flex items-center gap-3 group-hover:border-indigo-300 transition-all">
-                  <Upload className="w-4 h-4 text-slate-400" />
-                  <span className="text-sm text-slate-500 truncate">
-                    {formData.documento2 ? formData.documento2.name : 'Seleccionar archivo...'}
-                  </span>
-                </div>
-              </div>
-            </div>
-          </div>
-          <p className="text-slate-400 text-[10px] mt-4 text-center">Formatos permitidos: PDF, JPG, PNG. Máximo 2 archivos.</p>
         </section>
 
         <button
