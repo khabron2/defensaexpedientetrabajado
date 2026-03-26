@@ -5,6 +5,7 @@ export interface TimelineEvent {
   status: ExpedienteStatus;
   date: string;
   notes?: string;
+  user?: string;
 }
 
 export interface Empresa {

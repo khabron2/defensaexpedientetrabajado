@@ -114,35 +114,37 @@ export default function Reportes({ store }: ReportesProps) {
 
       {/* Detailed Stats Table */}
       <div className="bg-white p-8 rounded-3xl shadow-sm border border-slate-200">
-        <h3 className="text-lg font-bold text-slate-800 mb-6">Resumen Estadístico (Notificaciones)</h3>
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <h3 className="text-lg font-bold text-slate-800 mb-6">Resumen Estadístico</h3>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div className="p-6 bg-slate-50 rounded-2xl border border-slate-100">
             <p className="text-xs font-bold text-slate-400 uppercase mb-1">Audiencia</p>
             <p className="text-2xl font-black text-slate-900">
-              {store.notificaciones.filter((n: any) => n.tipo?.toLowerCase().includes('audiencia')).length}
+              {store.notificaciones.filter((n: any) => {
+                const tipo = (n.tipo || '').toUpperCase();
+                return tipo.includes('AUDIENCIA');
+              }).length}
             </p>
             <p className="text-[10px] text-emerald-600 font-bold mt-2">Cédulas enviadas</p>
           </div>
           <div className="p-6 bg-slate-50 rounded-2xl border border-slate-100">
             <p className="text-xs font-bold text-slate-400 uppercase mb-1">Notificación</p>
             <p className="text-2xl font-black text-slate-900">
-              {store.notificaciones.filter((n: any) => n.tipo?.toLowerCase().includes('notificaci')).length}
+              {store.notificaciones.filter((n: any) => {
+                const tipo = (n.tipo || '').toUpperCase();
+                return tipo.includes('NOTIFICACION') || tipo.includes('NOTIFICACIÓN');
+              }).length}
             </p>
-            <p className="text-[10px] text-slate-400 font-bold mt-2">Total registradas</p>
+            <p className="text-[10px] text-indigo-600 font-bold mt-2">Registradas</p>
           </div>
           <div className="p-6 bg-slate-50 rounded-2xl border border-slate-100">
             <p className="text-xs font-bold text-slate-400 uppercase mb-1">Auto de Imputación</p>
             <p className="text-2xl font-black text-slate-900">
-              {store.notificaciones.filter((n: any) => n.tipo?.toLowerCase().includes('auto de imputación')).length}
+              {store.notificaciones.filter((n: any) => {
+                const tipo = (n.tipo || '').toUpperCase();
+                return tipo.includes('AUTO DE IMPUTACION') || tipo.includes('AUTO DE IMPUTACIÓN');
+              }).length}
             </p>
             <p className="text-[10px] text-rose-600 font-bold mt-2">Requiere atención</p>
-          </div>
-          <div className="p-6 bg-slate-50 rounded-2xl border border-slate-100">
-            <p className="text-xs font-bold text-slate-400 uppercase mb-1">Actuación de Oficio</p>
-            <p className="text-2xl font-black text-slate-900">
-              {store.notificaciones.filter((n: any) => n.tipo?.toLowerCase().includes('actuación de oficio')).length}
-            </p>
-            <p className="text-[10px] text-indigo-600 font-bold mt-2">Iniciadas</p>
           </div>
         </div>
       </div>

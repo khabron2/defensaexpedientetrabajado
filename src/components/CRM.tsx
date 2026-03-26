@@ -20,14 +20,13 @@ import Expedientes from './crm/Expedientes';
 import Audiencias from './crm/Audiencias';
 import Reportes from './crm/Reportes';
 import Configuracion from './crm/Configuracion';
-import Notificaciones from './crm/Notificaciones';
 
 interface CRMProps {
   onBackToPublic: () => void;
   store: any;
 }
 
-type Section = 'dashboard' | 'expedientes' | 'audiencias' | 'notificaciones' | 'reportes' | 'configuracion';
+type Section = 'dashboard' | 'expedientes' | 'audiencias' | 'reportes' | 'configuracion';
 
 export default function CRM({ onBackToPublic, store }: CRMProps) {
   const [activeSection, setActiveSection] = useState<Section>('dashboard');
@@ -41,7 +40,6 @@ export default function CRM({ onBackToPublic, store }: CRMProps) {
     { id: 'dashboard', label: 'Dashboard General', icon: LayoutDashboard },
     { id: 'expedientes', label: 'Expedientes', icon: Files },
     { id: 'audiencias', label: 'Agenda de Audiencias', icon: Calendar },
-    { id: 'notificaciones', label: 'Notificaciones', icon: Bell },
     { id: 'reportes', label: 'Reportes e Informes', icon: BarChart3 },
     { id: 'configuracion', label: 'Configuración', icon: Settings },
   ];
@@ -51,7 +49,6 @@ export default function CRM({ onBackToPublic, store }: CRMProps) {
       case 'dashboard': return <Dashboard store={store} />;
       case 'expedientes': return <Expedientes store={store} />;
       case 'audiencias': return <Audiencias store={store} />;
-      case 'notificaciones': return <Notificaciones store={store} />;
       case 'reportes': return <Reportes store={store} />;
       case 'configuracion': return <Configuracion store={store} />;
       default: return <Dashboard store={store} />;

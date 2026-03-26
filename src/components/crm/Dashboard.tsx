@@ -35,9 +35,15 @@ export default function Dashboard({ store }: DashboardProps) {
     return dateB - dateA;
   });
 
+  const sortedByCreation = [...expedientes].sort((a: any, b: any) => {
+    const dateA = new Date(a.fechaCreacion).getTime() || 0;
+    const dateB = new Date(b.fechaCreacion).getTime() || 0;
+    return dateB - dateA;
+  });
+
   const stats = [
     { label: 'Total Expedientes', value: expedientes.length, icon: Files, color: 'bg-indigo-500' },
-    { label: 'Último Ingresado', value: expedientes[0]?.numero || '-', icon: Clock, color: 'bg-amber-500' },
+    { label: 'Último Ingresado', value: sortedByCreation[0]?.numero || '-', icon: Clock, color: 'bg-amber-500' },
     { label: 'Último Modificado', value: sortedByMod[0]?.numero || '-', icon: AlertCircle, color: 'bg-rose-500' },
   ];
 
@@ -126,6 +132,9 @@ export default function Dashboard({ store }: DashboardProps) {
                   <p className="text-xs font-bold text-indigo-600 uppercase">{exp.estado.split(' ')[0]}</p>
                   <p className="text-[10px] text-slate-400 font-medium">
                     {safeFormat(exp.fechaModificacion, 'HH:mm')}
+                    {exp.timeline && exp.timeline.length > 0 && exp.timeline[exp.timeline.length - 1].user && (
+                      <span className="ml-1 text-indigo-400">({exp.timeline[exp.timeline.length - 1].user})</span>
+                    )}
                   </p>
                 </div>
               </div>

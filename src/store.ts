@@ -203,7 +203,8 @@ export function useStore() {
         id: generateId(),
         status: 'expediente no armado, esperando documental',
         date: now,
-        notes: 'Reclamo ingresado por Ventanilla Única'
+        notes: 'Reclamo ingresado por Ventanilla Única',
+        user: currentUser?.username
       }]
     };
 
@@ -242,7 +243,7 @@ export function useStore() {
       fechaModificacion: now,
       timeline: [
         ...(Array.isArray(expToUpdate.timeline) ? expToUpdate.timeline : []),
-        { id: generateId(), status: newStatus, date: now, notes }
+        { id: generateId(), status: newStatus, date: now, notes, user: currentUser?.username }
       ]
     };
 

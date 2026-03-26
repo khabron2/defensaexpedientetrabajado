@@ -166,12 +166,13 @@ export default function Expedientes({ store }: ExpedientesProps) {
       const timelineData = exp.timeline.slice().reverse().map(event => [
         safeFormat(event.date, 'dd/MM/yyyy HH:mm'),
         event.status.toUpperCase(),
-        event.notes || '-'
+        event.notes || '-',
+        event.user || '-'
       ]);
       
       autoTable(doc, {
         startY: timelineY + 5,
-        head: [['Fecha', 'Estado', 'Notas']],
+        head: [['Fecha', 'Estado', 'Notas', 'Usuario']],
         body: timelineData,
         theme: 'grid',
         headStyles: { fillColor: [79, 70, 229] }
@@ -450,9 +451,16 @@ export default function Expedientes({ store }: ExpedientesProps) {
                             )}>
                               {event.status}
                             </p>
-                            <p className="text-[10px] text-slate-400 font-medium">
-                              {safeFormat(event.date, "d 'de' MMM, HH:mm", { locale: es })}
-                            </p>
+                            <div className="flex items-center gap-2 mt-1">
+                              <p className="text-[10px] text-slate-400 font-medium">
+                                {safeFormat(event.date, "d 'de' MMM, HH:mm", { locale: es })}
+                              </p>
+                              {event.user && (
+                                <span className="px-1.5 py-0.5 bg-indigo-100 text-indigo-700 rounded text-[9px] font-black uppercase tracking-tighter border border-indigo-200">
+                                  POR: {event.user}
+                                </span>
+                              )}
+                            </div>
                             {event.notes && (
                               <p className="text-[11px] text-slate-600 bg-white p-2 rounded-lg border border-slate-100 mt-2 italic">
                                 {event.notes}
