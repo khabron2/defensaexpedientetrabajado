@@ -41,24 +41,19 @@ export default function App() {
     <div className="min-h-screen bg-slate-50 font-sans text-slate-900">
       {/* Sync Error Banner */}
       {syncError && view !== 'crm' && (
-        <div className="fixed top-0 left-0 right-0 z-[100] bg-rose-600 text-white px-4 py-2 flex flex-col items-center justify-center gap-2 shadow-lg animate-in slide-in-from-top duration-500">
-          <div className="flex items-center gap-4">
-            <WifiOff className="w-4 h-4" />
-            <p className="text-xs font-bold tracking-wide uppercase">
-              Error de conexión con la base de datos. Trabajando en modo local.
-            </p>
-            <button 
-              onClick={() => refreshData()}
-              disabled={isSyncing}
-              className="flex items-center gap-2 px-3 py-1 bg-white/20 hover:bg-white/30 rounded-lg transition-all text-[10px] font-black uppercase tracking-widest disabled:opacity-50"
-            >
-              <RefreshCw className={cn("w-3 h-3", isSyncing && "animate-spin")} />
-              Reintentar
-            </button>
-          </div>
-          <p className="text-[10px] opacity-80 italic max-w-2xl text-center">
-            {syncError}
+        <div className="fixed top-0 left-0 right-0 z-[100] bg-rose-600 text-white px-4 py-2 flex items-center justify-center gap-4 shadow-lg animate-in slide-in-from-top duration-500">
+          <WifiOff className="w-4 h-4" />
+          <p className="text-xs font-bold tracking-wide uppercase">
+            Error de conexión con la base de datos. Trabajando en modo local.
           </p>
+          <button 
+            onClick={() => refreshData()}
+            disabled={isSyncing}
+            className="flex items-center gap-2 px-3 py-1 bg-white/20 hover:bg-white/30 rounded-lg transition-all text-[10px] font-black uppercase tracking-widest disabled:opacity-50"
+          >
+            <RefreshCw className={cn("w-3 h-3", isSyncing && "animate-spin")} />
+            Reintentar
+          </button>
         </div>
       )}
 

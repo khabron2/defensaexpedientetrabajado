@@ -1,20 +1,13 @@
 /// <reference types="vite/client" />
 import { Expediente, Notificacion } from '../types';
 
-const rawUrl = (import.meta.env.VITE_GOOGLE_SCRIPT_URL && import.meta.env.VITE_GOOGLE_SCRIPT_URL.startsWith('http')) 
-  ? import.meta.env.VITE_GOOGLE_SCRIPT_URL 
-  : 'https://script.google.com/macros/s/AKfycbzpUZk94tPOC5gu6vRwd0ALx21rh_iFm1sdinFMT6SW1Q8JMIb-N-KPmQbxi8eAvs8/exec';
+const SCRIPT_URL = import.meta.env.VITE_GOOGLE_SCRIPT_URL || 'https://script.google.com/macros/s/AKfycbykbBn_VOaZtlgKN30fnlKinGyemx9mw5FKq3o9R0Gm5NB-vFICh_y1wsU43p_rUVjS/exec';
 
-const SCRIPT_URL = rawUrl.trim();
-
-console.log('🔌 Google Sheets Service initialized with URL:', SCRIPT_URL ? `${SCRIPT_URL.substring(0, 40)}...` : 'NONE');
-
-async function fetchWithTimeout(url: string, options: RequestInit = {}, timeout = 90000) {
+async function fetchWithTimeout(url: string, options: RequestInit = {}, timeout = 60000) {
   const controller = new AbortController();
   const id = setTimeout(() => controller.abort(), timeout);
   
   try {
-    console.log(`🌐 Fetching: ${url.split('?')[0]}...`);
     const response = await fetch(url, {
       ...options,
       signal: controller.signal,
@@ -24,12 +17,7 @@ async function fetchWithTimeout(url: string, options: RequestInit = {}, timeout 
   } catch (error: any) {
     clearTimeout(id);
     
-    // Detectar errores de red/CORS específicos
-    if (error instanceof TypeError && error.message === 'Failed to fetch') {
-      console.error('🌐 Error de red o CORS detectado. Esto suele significar que el script de Google no está publicado como "Cualquiera" (Anyone) o la URL es incorrecta.');
-      throw new Error('Error de red o CORS. Verifique la configuración del script de Google (Publicar como "Cualquiera").');
-    }
-
+    // Verificar si es un error de aborto (timeout o manual)
     const isAbort = 
       error.name === 'AbortError' || 
       error.name === 'TimeoutError' ||
@@ -40,19 +28,20 @@ async function fetchWithTimeout(url: string, options: RequestInit = {}, timeout 
       ));
 
     if (isAbort) {
-      throw new Error(`Timeout de ${timeout}ms excedido. El script de Google está tardando demasiado en responder (posible inicio en frío).`);
+      throw new Error(`Timeout de ${timeout}ms excedido. El servidor de Google Apps Script está tardando demasiado en responder o está inactivo.`);
     }
     throw error;
   }
 }
 
-async function fetchWithRetry(url: string, options: RequestInit = {}, retries = 3, timeout = 90000): Promise<Response> {
+async function fetchWithRetry(url: string, options: RequestInit = {}, retries = 3, timeout = 60000): Promise<Response> {
   try {
     return await fetchWithTimeout(url, options, timeout);
   } catch (error: any) {
-    if (retries > 0 && !error.message?.includes('404')) {
-      console.log(`🔄 Reintentando (${retries} restantes)... Motivo: ${error.message || 'Error desconocido'}`);
-      const waitTime = (4 - retries) * 2000;
+    if (retries > 0) {
+      console.log(`🔄 Reintentando petición (${retries} intentos restantes)...`);
+      // Esperar un poco antes de reintentar (backoff exponencial simple: 1s, 2s, 3s)
+      const waitTime = (4 - retries) * 1000;
       await new Promise(resolve => setTimeout(resolve, waitTime));
       return fetchWithRetry(url, options, retries - 1, timeout);
     }
@@ -61,21 +50,31 @@ async function fetchWithRetry(url: string, options: RequestInit = {}, retries = 
 }
 
 export async function fetchExpedientesFromSheet(): Promise<Expediente[]> {
-  if (!SCRIPT_URL) return [];
+  if (!SCRIPT_URL) {
+    console.warn('⚠️ Google Sheets: No se ha configurado VITE_GOOGLE_SCRIPT_URL.');
+    return [];
+  }
   
   try {
+    console.log('📡 Fetching expedientes from Sheets (Timeout: 60s)...');
     const response = await fetchWithRetry(`${SCRIPT_URL}?action=getExpedientes`, {
       method: 'GET',
       mode: 'cors',
-      cache: 'no-cache',
-      redirect: 'follow'
+      cache: 'no-cache'
     });
     
     if (!response.ok) throw new Error(`Error HTTP: ${response.status}`);
     const data = await response.json();
+    console.log('✅ Fetched', data.length, 'expedientes from Sheets.');
     return data;
   } catch (error: any) {
     console.error('❌ Error al obtener datos de Sheets:', error.message || error);
+    
+    if (error.message?.includes('Timeout')) {
+      console.error('⏱️ La solicitud a Google Sheets excedió el tiempo de espera (60s). Esto suele ocurrir cuando el script de Google está en "frío" o hay demasiados datos.');
+    } else if (error.message === 'Failed to fetch' || error.name === 'TypeError') {
+      console.error('🌐 Error de red o CORS. Verifique que el script de Google esté publicado como "Cualquiera" (Anyone) y que tenga acceso a internet.');
+    }
     throw error;
   }
 }
@@ -84,18 +83,22 @@ export async function fetchUsersFromSheet(): Promise<any[]> {
   if (!SCRIPT_URL) return [];
   
   try {
+    console.log('📡 Fetching users from Sheets (Timeout: 60s)...');
     const response = await fetchWithRetry(`${SCRIPT_URL}?action=getUsers`, {
       method: 'GET',
       mode: 'cors',
-      cache: 'no-cache',
-      redirect: 'follow'
+      cache: 'no-cache'
     });
     
     if (!response.ok) throw new Error(`Error HTTP: ${response.status}`);
     const data = await response.json();
+    console.log('✅ Fetched', data.length, 'users from Sheets.');
     return data;
   } catch (error: any) {
     console.error('❌ Error al obtener usuarios de Sheets:', error.message || error);
+    if (error.message?.includes('Timeout')) {
+      console.error('⏱️ La solicitud a Google Sheets excedió el tiempo de espera (60s).');
+    }
     throw error;
   }
 }
@@ -104,18 +107,22 @@ export async function fetchNotificacionesFromSheet(): Promise<Notificacion[]> {
   if (!SCRIPT_URL) return [];
   
   try {
+    console.log('📡 Fetching notificaciones from Sheets (Timeout: 60s)...');
     const response = await fetchWithRetry(`${SCRIPT_URL}?action=getNotificaciones`, {
       method: 'GET',
       mode: 'cors',
-      cache: 'no-cache',
-      redirect: 'follow'
+      cache: 'no-cache'
     });
     
     if (!response.ok) throw new Error(`Error HTTP: ${response.status}`);
     const data = await response.json();
+    console.log('✅ Fetched', data.length, 'notificaciones from Sheets.');
     return data;
   } catch (error: any) {
     console.error('❌ Error al obtener notificaciones de Sheets:', error.message || error);
+    if (error.message?.includes('Timeout')) {
+      console.error('⏱️ La solicitud a Google Sheets excedió el tiempo de espera (60s).');
+    }
     throw error;
   }
 }
@@ -124,9 +131,10 @@ export async function saveExpedienteToSheet(expediente: Expediente): Promise<boo
   if (!SCRIPT_URL) return false;
 
   try {
-    console.log('📤 Enviando nuevo expediente a Sheets...', expediente.numero);
+    console.log('📤 Enviando nuevo expediente a Sheets...', expediente.numero, 'ID:', expediente.id);
     
-    // Usamos fetch directo con no-cors para evitar problemas de preflight en POST
+    // Enviamos como text/plain para evitar el preflight de CORS (OPTIONS)
+    // que Google Apps Script no maneja bien.
     await fetch(SCRIPT_URL, {
       method: 'POST',
       mode: 'no-cors',
@@ -139,7 +147,7 @@ export async function saveExpedienteToSheet(expediente: Expediente): Promise<boo
       }),
     });
     
-    console.log('✅ Petición de guardado enviada.');
+    console.log('✅ Petición de guardado enviada a Sheets.');
     return true;
   } catch (error) {
     console.error('❌ Error al guardar en Sheets:', error);
@@ -214,43 +222,6 @@ export async function updateAudienciaDateInSheet(expedienteId: string, fechaAudi
  *   
  *   if (params.action === 'addExpediente') {
  *     var exp = params.data;
- *     
- *     // --- Lógica de Carga de Archivos a Google Drive ---
- *     var folderName = "Expedientes_Adjuntos";
- *     var folders = DriveApp.getFoldersByName(folderName);
- *     var folder = folders.hasNext() ? folders.next() : DriveApp.createFolder(folderName);
- *     
- *     var docUrls = [];
- *     if (exp.documentos && exp.documentos.length > 0) {
- *       exp.documentos.forEach(function(docBase64, index) {
- *         try {
- *           // El formato esperado es: data:mime;name=filename;base64,data
- *           var parts = docBase64.split(',');
- *           var meta = parts[0];
- *           var base64Data = parts[1];
- *           
- *           var mimeType = meta.split(':')[1].split(';')[0];
- *           var fileName = "adjunto_" + exp.numero + "_" + index;
- *           
- *           // Intentar extraer el nombre si viene en el string
- *           if (meta.indexOf('name=') !== -1) {
- *             fileName = meta.split('name=')[1].split(';')[0];
- *           }
- *           
- *           var decodedData = Utilities.base64Decode(base64Data);
- *           var blob = Utilities.newBlob(decodedData, mimeType, fileName);
- *           var file = folder.createFile(blob);
- *           
- *           // Hacer el archivo público para que se pueda ver con el link
- *           file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
- *           docUrls.push(file.getUrl());
- *         } catch (err) {
- *           docUrls.push("Error al cargar: " + err.toString());
- *         }
- *       });
- *     }
- *     // --------------------------------------------------
- *     
  *     sheet.appendRow([
  *       exp.numero,
  *       exp.denunciante.nombre,
@@ -268,15 +239,15 @@ export async function updateAudienciaDateInSheet(expedienteId: string, fechaAudi
  *       exp.empresas[3] ? exp.empresas[3].nombre : '',
  *       exp.motivoReclamo,
  *       exp.peticiones,
- *       docUrls[0] || '', // URL del Documento 1
- *       docUrls[1] || '', // URL del Documento 2
+ *       exp.documentos[0] || '',
+ *       exp.documentos[1] || '',
  *       '', // Fecha de Audiencia (Col 19)
  *       exp.id, // Columna 1 (Col 20)
  *       exp.fechaCreacion, // Columna 2 (Col 21)
  *       exp.fechaModificacion || exp.fechaCreacion, // Columna 3 (Col 22)
  *       exp.estado, // Columna 4 (Col 23)
  *       JSON.stringify(exp.timeline || []), // Columna 5 (Col 24)
- *       docUrls.join(", ") // Todas las URLs en una sola columna (Col 25)
+ *       '' // Columna 6 (Col 25)
  *     ]);
  *     return ContentService.createTextOutput("Success").setMimeType(ContentService.MimeType.TEXT);
  *   }
