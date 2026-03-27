@@ -11,10 +11,11 @@ interface CartProps {
   onUpdateQuantity: (id: string, delta: number) => void;
   onRemoveItem: (id: string) => void;
   onClearCart: () => void;
+  onUpdateLocalStock: (id: string, newStock: number) => void;
   settings: AppSettings;
 }
 
-export default function Cart({ isOpen, onClose, items, onUpdateQuantity, onRemoveItem, onClearCart, settings }: CartProps) {
+export default function Cart({ isOpen, onClose, items, onUpdateQuantity, onRemoveItem, onClearCart, onUpdateLocalStock, settings }: CartProps) {
   const [customerName, setCustomerName] = useState('');
   const [address, setAddress] = useState('');
   const [paymentMethod, setPaymentMethod] = useState<'Efectivo' | 'Transferencia'>('Efectivo');
@@ -48,28 +49,33 @@ export default function Cart({ isOpen, onClose, items, onUpdateQuantity, onRemov
         .map((item) => `${item.PRODUCTO} x${item.quantity}`)
         .join(', ');
       
-      let phone = settings.whatsappNumber.replace(/\D/g, '');
-      // If it's an Argentine number and missing prefix, add it
-      if (phone.length === 10 && (phone.startsWith('3') || phone.startsWith('2') || phone.startsWith('1'))) {
+      let phone = String(settings.whatsappNumber || '').replace(/\D/g, '');
+      
+      // Argentine number logic
+      if (phone.length === 10) {
         phone = '549' + phone;
+      } else if (phone.length === 12 && phone.startsWith('54')) {
+        // If it has 54 but missing the 9 for mobile
+        phone = '549' + phone.substring(2);
       }
 
       const detailedProductList = items
         .map((item) => {
           const price = getItemPrice(item);
-          return `• ${item.PRODUCTO} x${item.quantity} - $${((price || 0) * (item.quantity || 1)).toLocaleString('es-AR')}`;
+          return `* ${item.PRODUCTO} x${item.quantity} - $${((price || 0) * (item.quantity || 1)).toLocaleString('es-AR')}`;
         })
         .join('\n');
       
-      const message = `Hola, quisiera realizar un encargo de los siguientes productos:\n\n${detailedProductList}\n\n` +
-        `--------------------------\n` +
-        `Subtotal: $${(subtotal || 0).toLocaleString('es-AR')}\n` +
-        `Entrega: ${deliveryMethod === 'Domicilio' ? `$${(settings?.shippingPrice || 0).toLocaleString('es-AR')} (A domicilio)` : 'Gratis (Retiro)'}\n` +
-        `TOTAL: $${(total || 0).toLocaleString('es-AR')}\n` +
-        `--------------------------\n` +
-        `Nombre: ${customerName}\n` +
-        `Domicilio: ${deliveryMethod === 'Domicilio' ? address : 'Retiro en local'}\n` +
-        `Pago: ${paymentMethod}`;
+      const message = `🐾 *¡Hola! Quisiera realizar un encargo de los siguientes productos:* 🐾\n\n${detailedProductList}\n\n` +
+        `━━━━━━━━━━━━━━━━━━━━\n` +
+        `💰 *Subtotal:* $${(subtotal || 0).toLocaleString('es-AR')}\n` +
+        `🚚 *Entrega:* ${deliveryMethod === 'Domicilio' ? `$${(settings?.shippingPrice || 0).toLocaleString('es-AR')} (A domicilio)` : 'Gratis (Retiro)'}\n` +
+        `✨ *TOTAL:* $${(total || 0).toLocaleString('es-AR')}\n` +
+        `━━━━━━━━━━━━━━━━━━━━\n` +
+        `👤 *Nombre:* ${customerName}\n` +
+        `📍 *Domicilio:* ${deliveryMethod === 'Domicilio' ? address : 'Retiro en local'}\n` +
+        `💳 *Pago:* ${paymentMethod}\n\n` +
+        `*En breve nos estaremos comunicando para terminar su encargo.*`;
       
       // Record sale in Google Sheets
       await recordSale({
@@ -84,6 +90,7 @@ export default function Cart({ isOpen, onClose, items, onUpdateQuantity, onRemov
       for (const item of items) {
         const newStock = Math.max(0, (item.STOCK || 0) - (item.quantity || 0));
         await updateStock(item.id, newStock);
+        onUpdateLocalStock(item.id, newStock);
       }
 
       const url = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
@@ -98,8 +105,13 @@ export default function Cart({ isOpen, onClose, items, onUpdateQuantity, onRemov
     }
   };
 
+  const copyToClipboard = () => {
+    const message = decodeURIComponent(whatsappUrl.split('text=')[1]);
+    navigator.clipboard.writeText(message);
+    alert('Mensaje copiado al portapapeles. Puedes pegarlo en WhatsApp.');
+  };
+
   const handleFinish = () => {
-    window.open(whatsappUrl, '_blank');
     setIsSuccess(false);
     setShowCheckout(false);
     setCustomerName('');
@@ -147,15 +159,27 @@ export default function Cart({ isOpen, onClose, items, onUpdateQuantity, onRemov
                   </div>
                   <div className="space-y-2">
                     <h3 className="text-2xl font-bold text-gray-800">¡Pedido Recibido!</h3>
-                    <p className="text-gray-500">Para completar tu compra, por favor envía el pedido por WhatsApp.</p>
+                    <p className="text-gray-500 text-sm">Para completar tu encargo, haz clic en el botón de abajo para enviar el pedido por WhatsApp.</p>
                   </div>
-                  <button
-                    onClick={handleFinish}
-                    className="w-full bg-green-500 text-white py-4 rounded-2xl font-bold text-lg shadow-lg shadow-green-100 hover:bg-green-600 transition-all flex items-center justify-center gap-2"
-                  >
-                    <Send className="w-5 h-5" />
-                    Enviar por WhatsApp
-                  </button>
+                  <div className="w-full space-y-3">
+                    <a
+                      href={whatsappUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={handleFinish}
+                      className="w-full bg-green-500 text-white py-4 rounded-2xl font-bold text-lg shadow-lg shadow-green-100 hover:bg-green-600 transition-all flex items-center justify-center gap-2"
+                    >
+                      <MessageCircle className="w-5 h-5" />
+                      Enviar por WhatsApp
+                    </a>
+                    <button
+                      onClick={copyToClipboard}
+                      className="w-full bg-gray-100 text-gray-600 py-3 rounded-xl font-bold text-sm hover:bg-gray-200 transition-all flex items-center justify-center gap-2"
+                    >
+                      <RefreshCw className="w-4 h-4" />
+                      Copiar mensaje (si falla el botón)
+                    </button>
+                  </div>
                 </motion.div>
               ) : items.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-full text-gray-400 gap-4">

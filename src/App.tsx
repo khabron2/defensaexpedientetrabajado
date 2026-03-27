@@ -49,9 +49,17 @@ function Shop() {
   }, [products, searchTerm, selectedCategory]);
 
   const addToCart = (product: Product) => {
+    const existing = cart.find((item) => item.id === product.id);
+    if (existing && existing.quantity >= product.STOCK) {
+      setToast(`¡No hay más stock de ${product.PRODUCTO}!`);
+      setTimeout(() => setToast(null), 2000);
+      return;
+    }
+    if (product.STOCK <= 0) return;
+
     setCart((prev) => {
-      const existing = prev.find((item) => item.id === product.id);
-      if (existing) {
+      const existingInPrev = prev.find((item) => item.id === product.id);
+      if (existingInPrev) {
         return prev.map((item) =>
           item.id === product.id ? { ...item, quantity: item.quantity + 1 } : item
         );
@@ -79,6 +87,12 @@ function Shop() {
   };
 
   const clearCart = () => setCart([]);
+
+  const updateLocalStock = (id: string, newStock: number) => {
+    setProducts((prev) =>
+      prev.map((p) => (p.id === id ? { ...p, STOCK: newStock } : p))
+    );
+  };
 
   if (loading) {
     return (
@@ -196,6 +210,7 @@ function Shop() {
         onUpdateQuantity={updateQuantity}
         onRemoveItem={removeFromCart}
         onClearCart={clearCart}
+        onUpdateLocalStock={updateLocalStock}
         settings={settings}
       />
 
