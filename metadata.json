@@ -1,5 +1,5 @@
 {
-  "name": "Expedientes Trabajados",
-  "description": "Sistema de gestión de reclamos y ventanilla única para defensa del consumidor.",
+  "name": "Mimitos Pet Shop",
+  "description": "Tienda online mobile-first para mascotas con catálogo sincronizado con Google Sheets y pedidos por WhatsApp.",
   "requestFramePermissions": []
 }
