@@ -194,15 +194,16 @@ export default function Hearings() {
                     {format(new Date(h.fechaAudiencia), 'HH:mm')}
                   </td>
                   <td className="py-6">
-                    <p className="text-sm font-bold text-slate-900">{h.numeroExpediente || "---"}</p>
-                    <p className="text-[10px] text-slate-500">{h.tipoCausa || "Causa General"}</p>
+                    <p className="text-sm font-bold text-slate-900">{h.numeroexpediente}</p>
+                    <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">{h.tipo}: {h.caracteristicas}</p>
                   </td>
                   <td className="py-6">
-                    <p className="text-sm font-medium text-slate-800">{h.caratula || "---"}</p>
+                    <p className="text-sm font-bold text-slate-800">{h.nombre} {h.apellido}</p>
+                    <p className="text-[10px] text-slate-400">DNI: {h.dni}</p>
                   </td>
                   <td className="py-6">
-                    <span className="text-[10px] font-black bg-slate-100 px-2 py-1 rounded">
-                      {h.juzgado || "Tribunal"}
+                    <span className="text-[10px] font-black bg-slate-900 text-white px-3 py-1 rounded-lg uppercase tracking-widest">
+                      {h.localidad}
                     </span>
                   </td>
                 </tr>

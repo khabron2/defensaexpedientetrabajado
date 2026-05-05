@@ -104,10 +104,15 @@ export default function Login({ onLogin }: LoginProps) {
             </button>
 
             <div className="pt-4 border-t border-slate-100">
-              <p className="text-center text-xs text-slate-400">
-                Acceso restringido a personal autorizado.
-                <br />
-                Base de datos vinculada a Google Sheets.
+              <p className="text-center text-[10px] text-slate-400 font-bold uppercase tracking-widest mb-2">
+                Credenciales de Prueba (Modo Desarrollo)
+              </p>
+              <div className="grid grid-cols-2 gap-2 text-[10px] text-slate-500 bg-slate-100 p-2 rounded-xl">
+                <div>User: <span className="font-bold">admin</span></div>
+                <div>Pass: <span className="font-bold">123</span></div>
+              </div>
+              <p className="text-center text-[9px] text-slate-400 mt-3 leading-tight italic">
+                En producción, se utilizarán los usuarios de la hoja "USUARIOS".
               </p>
             </div>
           </form>
