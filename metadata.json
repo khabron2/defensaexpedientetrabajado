@@ -1,5 +1,6 @@
 {
-  "name": "Mimitos Pet Shop",
-  "description": "Tienda online mobile-first para mascotas con catálogo sincronizado con Google Sheets y pedidos por WhatsApp.",
-  "requestFramePermissions": []
+  "name": "CaseManager CRM",
+  "description": "Professional Case Management CRM with Google Sheets integration, hearing scheduling, and real-time statistics.",
+  "requestFramePermissions": [],
+  "majorCapabilities": []
 }

@@ -1,27 +1,41 @@
-export interface Product {
+export interface Company {
+  nombre: string;
+  domicilio: string;
+}
+
+export interface StateHistory {
+  estado: string;
+  usuario: string;
+  fecha: string;
+}
+
+export interface Case {
   id: string;
-  CATEGORIA: string;
-  PRODUCTO: string;
-  CARACTERISTICAS: string;
-  PRECIO: number;
-  TALLE: string;
-  STOCK: number;
-  IMG: string;
-  IMG2: string;
-  IMG3: string;
-  OFERTA?: number; // Porcentaje de descuento (0, 10, 20, etc.)
+  numeroexpediente: string;
+  nombre: string;
+  apellido: string;
+  dni: string;
+  telefono?: string;
+  email?: string;
+  barrio: string;
+  calle: string;
+  numeracion: string;
+  entrecalle1: string;
+  entrecalle2: string;
+  localidad: string;
+  departamento: string;
+  tipo: 'Servicio' | 'Producto';
+  caracteristicas: string;
+  empresasDenunciadas: Company[];
+  reclamo: string;
+  peticiones: string;
+  fechaAudiencia: string;
+  estado: string;
+  usuario: string;
+  historialEstados: StateHistory[];
 }
 
-export interface AppSettings {
-  shippingPrice: number;
-  whatsappNumber: string;
-}
-
-export interface CartItem extends Product {
-  quantity: number;
-}
-
-export interface SaleSummary {
-  totalSold: number;
-  topProducts: { name: string; count: number }[];
+export interface User {
+  usuario: string;
+  nombre: string;
 }
