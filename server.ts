@@ -42,30 +42,82 @@ async function startServer() {
   ];
 
   const users = [
-    { usuario: "admin", password: "123", nombre: "Administrador" },
-    { usuario: "user1", password: "123", nombre: "Usuario Demo" }
+    { usuario: "ivan", password: "123", nombre: "Ivan" },
+    { usuario: "admin", password: "123", nombre: "Administrador" }
   ];
 
   // --- API ROUTES ---
+  const GAS_URL = process.env.GAS_URL;
+
+  const fetchFromGas = async (action: string, data: any = {}) => {
+    if (!GAS_URL) return null;
+    try {
+      const response = await fetch(GAS_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action, ...data })
+      });
+      return await response.json();
+    } catch (error) {
+      console.error(`Error fetching from GAS (${action}):`, error);
+      return null;
+    }
+  };
 
   // Auth
-  app.post("/api/login", (req, res) => {
+  app.post("/api/login", async (req, res) => {
     const { usuario, password } = req.body;
-    const user = users.find(u => u.usuario === usuario && u.password === password);
+    console.log(`Login attempt: ${usuario}`);
+
+    // Try GAS first if configured
+    if (GAS_URL) {
+      const result = await fetchFromGas("login", { usuario, password });
+      if (result) {
+        if (result.success) {
+          return res.json(result);
+        } else {
+          return res.status(401).json(result);
+        }
+      }
+    }
+
+    // Fallback to Mock Database for testing
+    const user = users.find(u => 
+      u.usuario.toString().toLowerCase() === usuario.toString().toLowerCase() && 
+      u.password.toString() === password.toString()
+    );
     if (user) {
       res.json({ success: true, user: { usuario: user.usuario, nombre: user.nombre } });
     } else {
-      res.status(401).json({ success: false, message: "Credenciales inválidas" });
+      res.status(401).json({ success: false, message: "DNI o Contraseña incorrecta (Mock)" });
     }
   });
 
   // List Cases
-  app.get("/api/cases", (req, res) => {
+  app.get("/api/cases", async (req, res) => {
+    if (GAS_URL) {
+      try {
+        const response = await fetch(`${GAS_URL}?action=getCases`);
+        const data = await response.json();
+        return res.json(data);
+      } catch (err) {
+        console.error("Error fetching cases from GAS:", err);
+      }
+    }
     res.json(cases);
   });
 
   // Get Stats
-  app.get("/api/stats", (req, res) => {
+  app.get("/api/stats", async (req, res) => {
+    if (GAS_URL) {
+      try {
+        const response = await fetch(`${GAS_URL}?action=getStats`);
+        const data = await response.json();
+        return res.json(data);
+      } catch (err) {
+        console.error("Error fetching stats from GAS:", err);
+      }
+    }
     const stats = {
       total: cases.length,
       byTipo: cases.reduce((acc, c) => {
@@ -85,9 +137,15 @@ async function startServer() {
   });
 
   // Create Case
-  app.post("/api/cases", (req, res) => {
+  app.post("/api/cases", async (req, res) => {
     const body = req.body;
     
+    if (GAS_URL) {
+      const result = await fetchFromGas("createCase", { payload: body, activeUser: body.activeUser });
+      if (result && result.success) return res.json(result);
+      if (result && result.error) return res.status(400).json({ message: result.error });
+    }
+
     // Auto-generate IDs
     const year = new Date().getFullYear();
     const count = cases.filter(c => c.id.startsWith(`DC-${year}`)).length + 1;
@@ -117,9 +175,15 @@ async function startServer() {
   });
 
   // Update Status
-  app.patch("/api/cases/:id/status", (req, res) => {
+  app.patch("/api/cases/:id/status", async (req, res) => {
     const { id } = req.params;
     const { estado, usuario } = req.body;
+
+    if (GAS_URL) {
+      const result = await fetchFromGas("updateStatus", { id, estado, usuario });
+      if (result && result.success) return res.json(result);
+    }
+
     const c = cases.find(item => item.id === id);
     if (c) {
       c.estado = estado;
@@ -135,9 +199,15 @@ async function startServer() {
   });
 
   // Update Hearing
-  app.patch("/api/cases/:id/hearing", (req, res) => {
+  app.patch("/api/cases/:id/hearing", async (req, res) => {
     const { id } = req.params;
     const { fechaAudiencia } = req.body;
+
+    if (GAS_URL) {
+      const result = await fetchFromGas("updateHearing", { id, fechaAudiencia });
+      if (result && result.success) return res.json(result);
+      if (result && result.error) return res.status(400).json({ message: result.error });
+    }
     
     // Validate slot limit
     const slotCount = cases.filter(c => c.fechaAudiencia === fechaAudiencia && c.id !== id).length;

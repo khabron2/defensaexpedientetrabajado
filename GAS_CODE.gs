@@ -88,16 +88,54 @@ function doGet(e) {
   return response({ error: "Action not permitted on GET" });
 }
 
+function handleGetStats() {
+  const sheet = SpreadsheetApp.openById(SPREADSHEET_ID).getSheetByName(SHEET_DATA);
+  const values = sheet.getDataRange().getValues();
+  const headers = values[0];
+  
+  const tipoIdx = headers.indexOf("tipo");
+  const caracteristicasIdx = headers.indexOf("caracteristicas");
+  const departamentoIdx = headers.indexOf("departamento");
+
+  const stats = {
+    total: values.length - 1,
+    byTipo: {},
+    byCaracteristicas: {},
+    byDepartamento: {}
+  };
+
+  for (let i = 1; i < values.length; i++) {
+    const t = values[i][tipoIdx];
+    const c = values[i][caracteristicasIdx];
+    const d = values[i][departamentoIdx];
+
+    stats.byTipo[t] = (stats.byTipo[t] || 0) + 1;
+    stats.byCaracteristicas[c] = (stats.byCaracteristicas[c] || 0) + 1;
+    stats.byDepartamento[d] = (stats.byDepartamento[d] || 0) + 1;
+  }
+  return response(stats);
+}
+
 function handleLogin(data) {
   const sheet = SpreadsheetApp.openById(SPREADSHEET_ID).getSheetByName(SHEET_USERS);
   const values = sheet.getDataRange().getValues();
+  const headers = values[0].map(h => h.toString().trim().toUpperCase());
+  
+  const userIdx = headers.indexOf("USUARIOS");
+  const passIdx = headers.indexOf("PASSWORD");
+  const nombreIdx = headers.indexOf("NOMBRE");
+  
   // Skip header
   for (let i = 1; i < values.length; i++) {
-    if (values[i][0] === data.usuario && values[i][1].toString() === data.password.toString()) {
-      return response({ success: true, user: { usuario: values[i][0], nombre: values[i][2] } });
+    const sheetUser = values[i][userIdx] ? values[i][userIdx].toString().toLowerCase() : "";
+    const sheetPass = values[i][passIdx] ? values[i][passIdx].toString() : "";
+    const sheetName = nombreIdx !== -1 ? values[i][nombreIdx] : values[i][userIdx];
+
+    if (sheetUser === data.usuario.toString().toLowerCase() && sheetPass === data.password.toString()) {
+      return response({ success: true, user: { usuario: sheetUser, nombre: sheetName } });
     }
   }
-  return response({ success: false, message: "Invalid credentials" });
+  return response({ success: false, message: "Usuario o contraseña incorrecta" });
 }
 
 function handleGetCases() {
